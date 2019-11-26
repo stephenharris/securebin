@@ -1,0 +1,6 @@
+{
+    "region": "local",
+    "endpoint": "http://secretsdb:8000",
+    "accessKeyId": "foo",
+    "secretAccessKey": "bar"
+}

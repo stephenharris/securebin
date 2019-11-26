@@ -1,0 +1,23 @@
+version: "3.1"
+
+services:
+    testapp:
+        container_name: secrets
+        hostname: secrets
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - "3000:3000"
+        volumes:
+            - .:/home/node
+            - /home/node/node_modules
+        working_dir: /home/node
+
+    dynamodb:
+        container_name: secretsdb
+        hostname: secretsdb
+        image: amazon/dynamodb-local:latest
+        restart: unless-stopped
+        ports:
+            - 8000:8000
