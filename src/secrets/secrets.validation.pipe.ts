@@ -31,7 +31,8 @@ export class SecretsValidationPipe implements PipeTransform {
 
     return {
       'secret': value.secret,
-      'expires': expires
+      'expires': expires,
+      'fileUpload': value.fileUpload
     };
   }
 }

@@ -23,6 +23,15 @@ provider:
         - dynamodb:DeleteItem
       Resource:
         - { "Fn::GetAtt": ["SecretsDynamoDBTable", "Arn" ] }
+    - Effect: Allow
+      Action:
+        - s3:GetObject
+        - s3:PutObject
+      Resource:
+        - { "Fn::GetAtt": ["FileStorageBucket", "Arn" ] }
+        - { "Fn::Join": [ "/", [ 
+            { "Fn::GetAtt": ["FileStorageBucket", "Arn" ] }, "*" 
+          ]]}
 
 functions:
   restHandler:
@@ -35,6 +44,23 @@ functions:
   
 resources:
   Resources:
+    FileStorageBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: securebin-filestorage
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault:
+                SSEAlgorithm: AES256
+        VersioningConfiguration:
+          Status: Suspended
+        CorsConfiguration:
+          CorsRules:
+            - AllowedHeaders: ['*']
+              AllowedMethods: [GET, PUT]
+              AllowedOrigins: ['*']
+              Id: CORSRuleId1
+              MaxAge: '3600'
     SecretsDynamoDBTable:
       Type: 'AWS::DynamoDB::Table'
       Properties:

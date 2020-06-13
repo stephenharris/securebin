@@ -9,11 +9,13 @@ var AWS = require('aws-sdk');
 export class SecretsService {
     
     private ddb;
+    private s3;
 
     private algorithm = 'aes256';
 
     constructor() {
         this.ddb = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'});
+        this.s3 = new AWS.S3();
     }
 
     public async storeSecret(data) {
@@ -28,15 +30,27 @@ export class SecretsService {
 
         const encrypted = this.encrypt(data.secret, key, iv);
 
-        await this.store(secretUuid, encrypted, hexIv, data.expires, this.algorithm);
+        await this.store(secretUuid, encrypted, hexIv, data.expires, this.algorithm, data.fileUpload);
 
-        return {
+        let response = {
             "uuid": secretUuid,
             "key": hexKey,
             "url": `https://securebin.c7e.uk/${secretUuid}/${hexKey}`,
             "expires": data.expires,
             "expiresISO": (new Date(data.expires*1000)).toISOString(),
-        };        
+        }; 
+        
+        if (data.fileUpload) {
+            const signedUrl = await this.s3.getSignedUrl('putObject', {
+                Bucket: 'securebin-filestorage',
+                Key: `uploads/${secretUuid}/${data.fileUpload}`,
+                Expires: 60*60,
+            });
+    
+            (response as any).signedUrl = signedUrl;
+        }
+
+        return response;
     }
 
     public async retrieveSecret(secretUuid, key) {
@@ -63,9 +77,18 @@ export class SecretsService {
 
         try {
             const deciphered = this.decrypt(results.Item.encryptedSecret, Buffer.from(key, 'hex'), Buffer.from(results.Item.iv, 'hex'));
+            let signedUrl = null;
+            if (results.Item.file) {
+                signedUrl = await this.s3.getSignedUrl('getObject', {
+                    Bucket: 'securebin-filestorage',
+                    Key: `uploads/${results.Item.uuid}/${results.Item.file}`,
+                    Expires: 60 * 60,
+                });
+            }
 
             return {
-                "secret": deciphered
+                "secret": deciphered,
+                "file": signedUrl
             };
         } catch (error) {
 
@@ -89,7 +112,7 @@ export class SecretsService {
         return deciphered;
     }
 
-    private store(uuid, encryptedSecretHex, ivHex: string, expires: number, algorithm: string): Promise<any> {
+    private store(uuid, encryptedSecretHex, ivHex: string, expires: number, algorithm: string, fileName: string): Promise<any> {
         var params = {
             TableName: "Secrets",
             Item: {
@@ -98,6 +121,7 @@ export class SecretsService {
                 "encryptedSecret": encryptedSecretHex,
                 "expires": expires,
                 "alg": algorithm,
+                "file": fileName
             }
         };
         return this.ddb.put(params).promise();
