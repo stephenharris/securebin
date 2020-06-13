@@ -13,11 +13,10 @@ export class SecretsService {
     private algorithm = 'aes256';
 
     constructor() {
-        AWS.config.loadFromPath('./config.json');
         this.ddb = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'});
     }
 
-    public storeSecret(data) {
+    public async storeSecret(data) {
 
         const key = randomBytes(32);
         const hexKey = key.toString('hex');
