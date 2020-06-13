@@ -3,10 +3,7 @@ import { ArgumentMetadata, Injectable, PipeTransform, BadRequestException} from 
 @Injectable()
 export class SecretsValidationPipe implements PipeTransform {
 
-  private vulnerabilities = [ 'blind', 'deaf', 'over65' ];
-
   transform(value: any, metadata: ArgumentMetadata) {
-    console.log('[pipe] psr validation');
 
     let expires = value.expires ? parseInt(value.expires, 10) : null;
 

@@ -12,13 +12,10 @@ export class SecretsController {
   @Post('secrets/')
   @HttpCode(200)
   async createSecret(@Body(new SecretsValidationPipe()) body: any) {
-    console.log('[controller]');
-    console.log(body);
     try {
         let response = await this.secretsService.storeSecret(body);
         return response;
     } catch (error) {
-        console.log("error=======================>");
         console.log("error", error);
         throw error;   
     }
