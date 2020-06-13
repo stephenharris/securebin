@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Secret Bin</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+  <div class="container">
+  <h1>Secret Bin</h1>
+
+  <div class="card">
+    <form  onsubmit="storeSecret(event)" id="storeSecret">
+
+      <div class="fieldContainer">
+        <label for="secret">Secret</label>
+        <textarea id="secret" name="secret"></textarea>
+      </div>
+
+      <div class="fieldContainer">
+        <label for="expires">Expires</label>
+          <select selected="604800" id="expires" name="expires">
+            <option value="600">in 10 minutes</option>
+            <option value="1800">in 30 minutes</option>
+            <option value="3600">in hour</option>
+            <option value="14400">in 4 hours</option>
+            <option value="86400">in 1 day</option>
+            <option value="172800">in 2 days</option>
+            <option value="604800">in 1 week</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="fieldContainer">
+        <button id="storeSecret__Button" type="submit">Store secret</button>
+
+        <div id="storeSecret__ButtonSpinner" class="spinner">
+          <div class="spinner__ball spinner__ball--delay1"></div>
+          <div class="spinner__ball spinner__ball--delay2"></div>
+          <div class="spinner__ball"></div>
+        </div>
+
+      </div>
+
+    </form>
+
+    <div id="secretLink" style="display: none;">
+      <pre id="secretLinkText" ></pre>
+
+      <div id="copyToClipboard">
+        <button onClick="onClickCopyToClipboard(event)">Copy to clipboard</button>
+        <textarea  id="copyToClipboardText" tabIndex="-1"></textarea>
+      </div>
+
+    </div>
+
+    <div id="getSecret"  class="getSecret" style="display: none;">
+      <p id="getSecret__FetchingSecretText">Fetching secret...</p>
+      <div id="getSecret__Spinner" class="spinner">
+        <div class="spinner__ball spinner__ball--delay1"></div>
+        <div class="spinner__ball spinner__ball--delay2"></div>
+        <div class="spinner__ball"></div>
+      </div>
+      <textarea id="secretText"></textarea>
+    </div>
+
+    <div id="error" class="notice notice--error" style="display:none;"></div>
+  </div>
+  
+  <script>
+    function showElementById(id) {
+      document.getElementById(id).style = 'display:block';
+    }
+
+    function hideElementById(id) {
+      document.getElementById(id).style = 'display:none';
+    }
+
+    function displayError(message) {
+      showElementById("error");
+      document.getElementById("error").innerText = message;
+    }
+
+    function hideError() {
+      hideElementById("error");
+    }
+
+    function onClickCopyToClipboard(event) {
+      event.preventDefault();
+      document.getElementById("copyToClipboardText").select();
+      document.execCommand('copy');
+      event.target.focus();
+    }
+
+    async function storeSecret(e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      var formData = new FormData(document.getElementById('storeSecret'));
+      let data = {};
+
+      data['secret'] = formData.get('secret');//encrypt(formData.get('secret'), key, iv);
+      data['expires'] = parseInt(formData.get('expires'), 10) + Math.floor(Date.now() / 1000);
+
+      document.getElementById('storeSecret__Button').disabled = true;
+      document.getElementById('storeSecret__ButtonSpinner').style = "visibility:visible";
+
+      const response = await fetch(' https://aiyw0ahlyf.execute-api.eu-west-2.amazonaws.com/testing/secrets/', {
+          method: 'POST',
+          cache: 'no-cache',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + window._id_token,
+          },
+          body: JSON.stringify(data) // body data type must match "Content-Type" header
+      });
+      
+      let responseBody = await response.json(); // parses JSON response into native JavaScript objects
+      console.log(responseBody);
+
+      document.getElementById('storeSecret__Button').disabled = false;
+      document.getElementById('storeSecret__ButtonSpinner').style = "visibility:hidden";
+      
+      hideElementById('storeSecret');
+      showElementById('secretLink');
+
+      document.getElementById('copyToClipboardText').value = responseBody.url;
+      document.getElementById('secretLinkText').innerText = responseBody.url;
+    }
+
+    async function getSecret(key) {
+      document.getElementById('getSecret').style = 'display:flex';
+      hideElementById('storeSecret');
+
+      document.getElementById('getSecret__Spinner').style = 'visibility:visible';
+
+      const response = await fetch(` https://aiyw0ahlyf.execute-api.eu-west-2.amazonaws.com/testing/secrets/${key}`, {
+          method: 'GET',
+          cache: 'no-cache',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+      });
+
+      let responseBody = await response.json(); // parses JSON response into native JavaScript objects
+      
+      document.getElementById('getSecret__FetchingSecretText').style = 'display:none';
+      document.getElementById('getSecret__Spinner').style = 'visibility:hidden';
+
+      if (response.status === 200) {
+        document.getElementById('secretText').value = responseBody.secret
+        showElementById('secretText');
+      } else {
+        displayError(responseBody.message);
+        hideElementById('secretText');
+      }
+    }
+
+    let key = location.pathname.replace(/^\/+|\/+$/g, '');
+    console.log(key);
+
+    if (key) {
+      getSecret(key);
+    }
+  </script>
+  </div>
+</body>
+</html>
