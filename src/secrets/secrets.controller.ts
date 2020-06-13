@@ -2,13 +2,13 @@ import { Controller, Get, Query, Post, Body, Put, Param, Delete, HttpCode, UsePi
 import { SecretsService } from './secrets.service';
 import { SecretsValidationPipe } from './secrets.validation.pipe';
 import { BadRequestException} from '@nestjs/common';
-import {User} from '../user.dectorator';
 
 @Controller()
 export class SecretsController {
 
   constructor(private readonly secretsService: SecretsService) {}
 
+  
   @Post('secrets/')
   @HttpCode(200)
   async createSecret(@Body(new SecretsValidationPipe()) body: any) {
@@ -24,11 +24,11 @@ export class SecretsController {
     }
   }
 
-  @Get('secrets/:uuid/:key')
+  @Get('secrets/:uuid/:serverSecretKey')
   @HttpCode(200)
-  async getSecret(@Param('uuid') uuid: string, @Param('key') key: string, @User() user) {
+  async getSecret(@Param('uuid') uuid: string, @Param('serverSecretKey') serverSecretKey: string) {
 
-    return this.secretsService.retrieveSecret(uuid, key, user)
+    return this.secretsService.retrieveSecret(uuid, serverSecretKey)
     .catch((error) => {
       console.log(error.message);
       throw new BadRequestException({

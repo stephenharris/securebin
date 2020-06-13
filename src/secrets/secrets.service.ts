@@ -29,18 +29,18 @@ export class SecretsService {
 
         const encrypted = this.encrypt(data.secret, key, iv);
 
-        this.store(secretUuid, encrypted, hexIv, data.expires, this.algorithm, data.recipient);
+        await this.store(secretUuid, encrypted, hexIv, data.expires, this.algorithm);
 
         return {
             "uuid": secretUuid,
             "key": hexKey,
-            "url": `http://localhost:3000/secrets/${secretUuid}/${hexKey}`,
+            "url": `https://securebin.c7e.uk/${secretUuid}/${hexKey}`,
             "expires": data.expires,
             "expiresISO": (new Date(data.expires*1000)).toISOString(),
         };        
     }
 
-    public async retrieveSecret(secretUuid, key, user) {
+    public async retrieveSecret(secretUuid, key) {
         var params = {
             TableName: "Secrets",
             Key: {
@@ -55,11 +55,6 @@ export class SecretsService {
             throw new Error("Secret not found");
         }
 
-        if (results.Item.recipient && results.Item.recipient !== user) {
-            console.log(`Request for secret for ${results.Item.recipient} by ${user} denied`);
-            throw new Error("Permission denied");
-        }
-
         await this.ddb.delete(params).promise();
 
         if(results.Item.expires <= Math.floor(Date.now() / 1000) ) {
@@ -69,8 +64,6 @@ export class SecretsService {
 
         try {
             const deciphered = this.decrypt(results.Item.encryptedSecret, Buffer.from(key, 'hex'), Buffer.from(results.Item.iv, 'hex'));
-
-            console.log(`Secret ${secretUuid} retrieved by ${user}`);
 
             return {
                 "secret": deciphered
@@ -97,7 +90,7 @@ export class SecretsService {
         return deciphered;
     }
 
-    private store(uuid, encryptedSecretHex, ivHex: string, expires: number, algorithm: string, recipient?: string): Promise<any> {
+    private store(uuid, encryptedSecretHex, ivHex: string, expires: number, algorithm: string): Promise<any> {
         var params = {
             TableName: "Secrets",
             Item: {
@@ -106,7 +99,6 @@ export class SecretsService {
                 "encryptedSecret": encryptedSecretHex,
                 "expires": expires,
                 "alg": algorithm,
-                "recipient": recipient
             }
         };
         return this.ddb.put(params).promise();
