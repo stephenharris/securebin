@@ -156,7 +156,9 @@
       }
     }
 
-    let key = location.pathname.replace(/^\/+|\/+$/g, '');
+    var url = sessionStorage.redirect ? sessionStorage.redirect : location;
+    delete sessionStorage.redirect;
+    var key = url.pathname.replace(/^\/+|\/+$/g, '');
     console.log(key);
 
     if (key) {
